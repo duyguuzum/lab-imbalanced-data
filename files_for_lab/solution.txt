@@ -1,0 +1,166 @@
+Lab | Imbalanced data
+
+Instructions
+1-Load the dataset and explore the variables.
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+-----
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+-----
+data=pd.read_csv('customer_churn.csv')
+
+display(data.head())
+
+2-We will try to predict variable Churn using a logistic regression on variables tenure, SeniorCitizen,MonthlyCharges.
+3-Split the Dataset into X ('tenure', 'SeniorCitizen', 'MonthlyCharges') and y ('Churn')
+
+# X/y split
+X = data[['tenure', 'SeniorCitizen', 'MonthlyCharges']]
+y = data['Churn']
+-----
+correlations_matrix = X.corr()
+sns.heatmap(correlations_matrix, annot=True)
+plt.show()
+-----
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
+----
+transformer = StandardScaler()
+transformer.fit(X_train)
+
+X_train_scaled_np = transformer.transform(X_train)
+X_train_scaled = pd.DataFrame(X_train_scaled_np, columns=X_train.columns, index=X_train.index)
+
+X_test_scaled_np = transformer.transform(X_test)
+X_test_scaled = pd.DataFrame(X_test_scaled_np , columns=X_test.columns, index=X_test.index)
+X_train_scaled.head()
+-----
+y_train.head()
+
+4-Build the logistic regression model.
+
+from sklearn.linear_model import LogisticRegression
+
+lr = LogisticRegression(random_state=0, solver='lbfgs')
+lr.fit(X_train_scaled, y_train)
+-----
+lr.predict_proba(X_train_scaled)
+-----
+lr.predict_proba(X_train_scaled).shape
+-----
+lr.predict(X_train_scaled)
+-----
+logits = np.log(lr.predict_proba(X_train_scaled)[:,1]/(1-lr.predict_proba(X_train_scaled)[:,1]))
+
+5-Evaluate the model.
+
+from sklearn.linear_model import LogisticRegression
+
+lr = LogisticRegression(random_state=0, solver='lbfgs')
+lr.fit(X_train_scaled, y_train)
+print("The accuracy of the model in the TEST set is: {:.2f}".format(lr.score(X_test_scaled, y_test)))
+-----
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, cohen_kappa_score
+
+y_pred_test = lr.predict(X_test_scaled)
+
+print("The accuracy in the TEST set is: {:.2f}".format(accuracy_score(y_test,y_pred_test)))
+print("The Kappa in the TEST set is: {:.2f}".format(cohen_kappa_score(y_test,y_pred_test)))
+-----
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+cm_test = confusion_matrix(y_test,y_pred_test)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_test, display_labels=lr.classes_)
+disp.plot()
+plt.show()
+-----
+majority_indexes = y_train[y_train == 0].index
+minority_indexes = y_train[y_train == 1].index
+-----
+from collections import Counter
+from imblearn.over_sampling import RandomOverSampler 
+-----
+ros = RandomOverSampler(random_state=42)
+
+X_train_over, y_train_over = ros.fit_resample(X_train_scaled, y_train)
+display(pd.concat([X_train_over,y_train_over],axis=1).head())
+print('Resampled dataset shape %s' % Counter(y_train_over))
+print(y_train_over.value_counts())
+-----
+lr = LogisticRegression(max_iter=1000)
+lr.fit(X_train_over, y_train_over)
+y_pred_test = lr.predict(X_test_scaled)
+
+print("The accuracy in the TEST set is: {:.2f}".format(accuracy_score(y_test,y_pred_test)))
+#print("The precision in the TEST set is: {:.2f}".format(precision_score(y_test,y_pred_test)))
+#print("The recall in the TEST set is: {:.2f}".format(recall_score(y_test,y_pred_test)))
+#print("The F1 in the TEST set is: {:.2f}".format(f1_score(y_test,y_pred_test)))
+print("The Kappa in the TEST set is: {:.2f}".format(cohen_kappa_score(y_test,y_pred_test)))
+-----
+cm_test = confusion_matrix(y_test,y_pred_test)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_test, display_labels=lr.classes_)
+disp.plot()
+plt.show()
+-----
+from imblearn.under_sampling import RandomUnderSampler
+-----
+rus = RandomUnderSampler(random_state=42)
+
+X_train_under, y_train_under = rus.fit_resample(X_train_scaled, y_train)
+display(pd.concat([X_train_under,y_train_under],axis=1).head())
+print('Resampled dataset shape %s' % Counter(y_train_under))
+-----
+from sklearn.linear_model import LogisticRegression
+
+lr = LogisticRegression(max_iter=1000)
+lr.fit(X_train_under, y_train_under)
+y_pred_test = lr.predict(X_test_scaled)
+
+print("The accuracy in the TEST set is: {:.2f}".format(accuracy_score(y_test,y_pred_test)))
+#print("The precision in the TEST set is: {:.2f}".format(precision_score(y_test,y_pred_test)))
+#print("The recall in the TEST set is: {:.2f}".format(recall_score(y_test,y_pred_test)))
+#print("The F1 in the TEST set is: {:.2f}".format(f1_score(y_test,y_pred_test)))
+print("The Kappa in the TEST set is: {:.2f}".format(cohen_kappa_score(y_test,y_pred_test)))
+-----
+cm_test = confusion_matrix(y_test,y_pred_test)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_test, display_labels=lr.classes_)
+disp.plot()
+plt.show()
+
+6-Even a simple model will give us more than 70% accuracy. Why?
+
+7-Synthetic Minority Oversampling TEchnique (SMOTE) is an over sampling technique based on nearest neighbors that adds new points between existing points. Apply imblearn.over_sampling.SMOTE to the dataset. Build and evaluate the logistic regression model. Is it there any improvement?
+
+from imblearn.over_sampling import SMOTE
+-----
+sm = SMOTE(random_state=100,k_neighbors=3)
+
+X_train_SMOTE,y_train_SMOTE = sm.fit_resample(X_train_scaled,y_train)
+-----
+print(X_train.shape)
+print(X_train_SMOTE.shape)
+-----
+y_train_SMOTE.value_counts()
+-----
+from sklearn.linear_model import LogisticRegression
+
+lr = LogisticRegression(max_iter=1000)
+lr.fit(X_train_SMOTE, y_train_SMOTE)
+y_pred_test = lr.predict(X_test_scaled)
+
+print("The accuracy in the TEST set is: {:.2f}".format(accuracy_score(y_test,y_pred_test)))
+#print("The precision in the TEST set is: {:.2f}".format(precision_score(y_test,y_pred_test)))
+#print("The recall in the TEST set is: {:.2f}".format(recall_score(y_test,y_pred_test)))
+#print("The F1 in the TEST set is: {:.2f}".format(f1_score(y_test,y_pred_test)))
+print("The Kappa in the TEST set is: {:.2f}".format(cohen_kappa_score(y_test,y_pred_test)))
+-----
+cm_test = confusion_matrix(y_test,y_pred_test)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_test, display_labels=lr.classes_)
+disp.plot()
+plt.show()
+-----
